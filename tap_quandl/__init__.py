@@ -20,15 +20,14 @@ session = requests.Session()
 
 DATE_FORMAT = '%Y-%m-%d'
 
-def parse_response(r):
-    payload = r.json()['dataset_data']
-    date_idx = payload['column_names'].index('Date')
-    adj_close_idx = payload['column_names'].index('Adj. Close')
+def parse_response_data(response):
+    date_idx = response['column_names'].index('Date')
+    adj_close_idx = response['column_names'].index('Adj. Close')
 
     data = {}
-    if len(payload['data']) > 0:
-        data['date'] = payload['data'][0][date_idx]
-        data['price'] = payload['data'][0][adj_close_idx]
+    if len(response['data']) > 0:
+        data['date'] = response['data'][0][date_idx]
+        data['price'] = response['data'][0][adj_close_idx]
     return data
 
 schema = {'type': 'object',
@@ -49,7 +48,7 @@ def giveup(error):
                       max_tries=5,
                       giveup=giveup,
                       interval=30)
-def request(url, params):
+def send_request(url, params):
     response = requests.get(url=url, params=params)
     response.raise_for_status()
     return response
@@ -70,7 +69,7 @@ def do_sync(ticker, start_date, end_date):
                           'start_date': next_date,
                           'end_date': next_date,
                           'order': 'asc'}
-            response = request(ticker_url, param_dict)
+            response = send_request(ticker_url, param_dict)
 
             if datetime.strptime(next_date, DATE_FORMAT) > datetime.utcnow():
                 break
@@ -78,7 +77,7 @@ def do_sync(ticker, start_date, end_date):
                  datetime.strptime(end_date, DATE_FORMAT):
                 break
             else:
-                data_dict = parse_response(response)
+                data_dict = parse_response_data(response.json()['dataset_data'])
                 if 'price' in data_dict:
                     data_dict['ticker'] = ticker
                     singer.write_records('stock_price', [data_dict])
