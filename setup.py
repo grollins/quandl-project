@@ -15,4 +15,5 @@ setup(name='tap-quandl-stock-price',
           [console_scripts]
           tap-quandl-stock-price=tap_quandl:main
       ''',
+      packages=['tap_quandl']
 )
