@@ -7,6 +7,9 @@
         },
         "price": {
             "type": "number"
+        },
+        "ticker": {
+            "type": "string"
         }
     }
 }
