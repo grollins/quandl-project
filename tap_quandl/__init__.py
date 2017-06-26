@@ -38,6 +38,7 @@ schema = singer.utils.load_json(get_abs_path('schema.json'))
 def giveup(error):
     logger.error(error.response.text)
     response = error.response
+    # keep trying if the response code is one of these
     return not (response.status_code == 429 or
                 response.status_code >= 500)
 
@@ -48,7 +49,7 @@ def giveup(error):
                       giveup=giveup,
                       interval=30)
 def send_request(url, params):
-    response = requests.get(url=url, params=params)
+    response = session.get(url=url, params=params)
     response.raise_for_status()
     return response
 
