@@ -15,5 +15,11 @@ setup(name='tap-quandl-stock-price',
           [console_scripts]
           tap-quandl-stock-price=tap_quandl:main
       ''',
-      packages=['tap_quandl']
+      packages=['tap_quandl'],
+      package_data = {
+          'tap_quandl': [
+              'schema.json',
+          ],
+      },
+      include_package_data=True,
 )

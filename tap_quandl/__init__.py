@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import environ
+import os
 import json
 import sys
 import argparse
@@ -11,7 +11,7 @@ import backoff
 
 from datetime import date, datetime, timedelta
 
-TOKEN = environ['QUANDL_TOKEN']
+TOKEN = os.environ['QUANDL_TOKEN']
 
 base_url = 'https://www.quandl.com/api/v3/datasets/WIKI/'
 
@@ -30,11 +30,10 @@ def parse_response_data(response):
         data['price'] = response['data'][0][adj_close_idx]
     return data
 
-schema = {'type': 'object',
-          'properties':
-          {'date': {'type': 'string',
-                    'format': 'date-time'}},
-          'additionalProperties': True}
+def get_abs_path(path):
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+schema = singer.utils.load_json(get_abs_path('schema.json'))
 
 def giveup(error):
     logger.error(error.response.text)
