@@ -12,6 +12,14 @@ def test_parse_response_data_to_get_date_and_price():
     assert 'date' in data_dict
     assert 'price' in data_dict
 
+def test_empty_dict_when_parse_missing_response_data():
+    response = {'column_names': ['Date', 'Open', 'High', 'Low', 'Close', 'Volume',
+                'Ex-Dividend', 'Split Ratio', 'Adj. Open', 'Adj. High',
+                'Adj. Low', 'Adj. Close', 'Adj. Volume'],
+                'data': []}
+    data_dict = parse_response_data(response)
+    assert len(data_dict) == 0
+
 def test_raise_http_error_when_404():
     with pytest.raises(HTTPError):
         send_request(url='http://httpbin.org/status/404', params={})
