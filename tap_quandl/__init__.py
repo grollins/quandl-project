@@ -24,10 +24,9 @@ def parse_response_data(response):
     date_idx = response['column_names'].index('Date')
     adj_close_idx = response['column_names'].index('Adj. Close')
 
-    data = {}
+    data = []
     if len(response['data']) > 0:
-        data['date'] = response['data'][0][date_idx]
-        data['price'] = response['data'][0][adj_close_idx]
+        data = [dict(date=x[date_idx], price=x[adj_close_idx]) for x in response['data']]
     return data
 
 def get_abs_path(path):
@@ -58,36 +57,22 @@ def do_sync(ticker, start_date, end_date):
     logger.info(template_str.format(ticker, start_date, end_date))
     singer.write_schema('stock_price', schema, 'date')
 
+    if datetime.strptime(start_date, DATE_FORMAT) > datetime.utcnow():
+        return
+    elif datetime.strptime(start_date, DATE_FORMAT) > \
+         datetime.strptime(end_date, DATE_FORMAT):
+        return
+
     state = {'start_date': start_date}
-    next_date = start_date
 
     ticker_url = '/'.join([base_url, ticker, 'data.json'])
 
     try:
-        while True:
-            param_dict = {'api_key': TOKEN,
-                          'start_date': next_date,
-                          'end_date': next_date,
-                          'order': 'asc'}
-            response = send_request(ticker_url, param_dict)
-
-            if datetime.strptime(next_date, DATE_FORMAT) > datetime.utcnow():
-                break
-            elif datetime.strptime(next_date, DATE_FORMAT) > \
-                 datetime.strptime(end_date, DATE_FORMAT):
-                break
-            else:
-                data_dict = parse_response_data(response.json()['dataset_data'])
-                if 'price' in data_dict:
-                    data_dict['ticker'] = ticker
-                    singer.write_records('stock_price', [data_dict])
-                else:
-                    # data_dict will be empty if the markets were closed on
-                    # next_date
-                    pass
-                state = {'start_date': next_date}
-                next_date = (datetime.strptime(next_date, DATE_FORMAT) + \
-                             timedelta(days=1)).strftime(DATE_FORMAT)
+        param_dict = {'api_key': TOKEN,
+                      'start_date': start_date,
+                      'end_date': end_date,
+                      'order': 'asc'}
+        response = send_request(ticker_url, param_dict)
 
     except requests.exceptions.RequestException as e:
         logger.fatal('Error on ' + e.request.url +
@@ -95,6 +80,19 @@ def do_sync(ticker, start_date, end_date):
                      ': ' + e.response.text)
         singer.write_state(state)
         sys.exit(-1)
+
+    stock_data = parse_response_data(response.json()['dataset_data'])
+    for d in stock_data:
+        if 'price' in d:
+            d['ticker'] = ticker
+            singer.write_records('stock_price', [d])
+            next_date = (datetime.strptime(d['date'], DATE_FORMAT) + \
+                             timedelta(days=1)).strftime(DATE_FORMAT)
+            state['start_date'] = next_date
+        else:
+            # data_dict will be empty if the markets were closed on
+            # next_date
+            continue
 
     singer.write_state(state)
     logger.info('Tap exiting normally')
