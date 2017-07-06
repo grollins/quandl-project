@@ -1,0 +1,75 @@
+---
+title: "S&P 500 Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Load data
+
+```{r}
+df <- read_csv("~/Documents/quandl/output/stock_price_500.csv", 
+               col_types = cols(date = col_datetime(format = "%Y-%m-%d")))
+```
+
+Loaded `r nrow(df)` rows and `r ncol(df)` columns.
+<br>
+<br>
+
+## Distribution of stock prices on July 3rd, 2017
+
+```{r}
+df %>%
+    filter(date == lubridate::ymd('20170703')) %>%
+    ggplot(aes(log10(price))) +
+        geom_density(adjust = 0.75, fill = '#455a64', alpha = 0.25) +
+        geom_rug(color = 'grey50') +
+        labs(x = 'log10(Price)', y = 'Density') +
+        ggthemes::theme_few()
+```
+
+## Price vs. time with GE and MSFT highlighted
+
+```{r fig.width=8, fig.height=6}
+df2 <- df %>%
+    filter(price < 100) %>%
+    mutate(highlight = (ticker %in% c('GE', 'MSFT')))
+
+ggplot(df2, aes(date, price, group = ticker)) +
+    geom_line(alpha = 0.1) +
+    geom_line(data = df2 %>% filter(highlight == T),
+              color = '#d32f2f', size = 1) +
+    labs(x = '2017', y = 'Price ($)') +
+    ggthemes::theme_few()
+```
+
+## MSFT price vs. time
+
+```{r}
+df %>%
+    filter(ticker == 'MSFT') %>%
+    ggplot(aes(date, price)) +
+        geom_line(color = '#1976d2') +
+        labs(x = '2017', y = 'Price ($)') +
+        ggthemes::theme_few()
+```
+
+## Median stock price vs. time
+
+```{r}
+df %>%
+    group_by(date) %>%
+    summarize(md = median(price),
+              lower = quantile(price, 0.25),
+              upper = quantile(price, 0.75)) %>%
+    ggplot(aes(date, md)) +
+        geom_line(color = '#1976d2') +
+        geom_ribbon(aes(ymin = lower, ymax = upper),
+                    fill = '#1976d2', alpha = 0.1) +
+        labs(x = '2017', y = 'Price ($)') +
+        ggthemes::theme_few()
+```
+
