@@ -54,5 +54,19 @@ class QuandlSync(luigi.Task):
         df.to_csv(self.output().fn, index = False)
 
 
+class GenerateQuandlReport(luigi.Task):
+    input_filename = luigi.Parameter()
+    output_filename = luigi.Parameter()
+
+    def requires(self):
+        return QuandlSync(self.input_filename, self.output_filename)
+
+    def output(self):
+        return luigi.LocalTarget('sp500.html')
+
+    def run(self):
+        os.system('Rscript generate_report.R')
+
+
 if __name__ == '__main__':
     luigi.run()
