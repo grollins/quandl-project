@@ -15,7 +15,7 @@ class MakeTapConfig(luigi.Task):
 
     def run(self):
         with self.output().open('w') as f:
-            json.dump({'start_date': '2017-05-01', 'end_date': '2017-06-03',
+            json.dump({'start_date': '2017-01-01', 'end_date': '2017-07-03',
                        'ticker': self.ticker}, f)
 
 
@@ -35,21 +35,24 @@ class SyncPrice(luigi.Task):
 
 
 class QuandlSync(luigi.Task):
+    input_filename = luigi.Parameter()
+    output_filename = luigi.Parameter()
 
     def requires(self):
         task_list = []
-        with open('ticker_symbols.txt', 'r') as f:
+        with open(self.input_filename, 'r') as f:
             task_list = [SyncPrice(ticker.strip()) for ticker in f.readlines()]
         return task_list
 
     def output(self):
-        return luigi.LocalTarget('output/stock_price.csv')
+        return luigi.LocalTarget(self.output_filename)
 
     def run(self):
         input_filenames = [x.fn for x in self.input()]
         df_list = [pd.read_csv(fn) for fn in input_filenames]
         df = pd.concat(df_list)
         df.to_csv(self.output().fn, index = False)
+
 
 if __name__ == '__main__':
     luigi.run()
